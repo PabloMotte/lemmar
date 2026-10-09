@@ -1,7 +1,6 @@
 import linecache
 import os
 import re
-import subprocess
 import sys
 from random import randrange
 
@@ -13,7 +12,7 @@ CHUNK_SIZE = 4096
 def bufcount(filename):
     lines = 0
     with open(filename) as f:
-        buf_size = 1024 * 1024
+        buf_size = CHUNK_SIZE
         read_f = f.read # loop optimization
 
         buf = read_f(buf_size)
@@ -23,18 +22,9 @@ def bufcount(filename):
 
     return lines
 
-def file_len(fname):
-    p = subprocess.Popen(['wc', '-l', fname], stdout=subprocess.PIPE, 
-                                              stderr=subprocess.PIPE)
-    result, err = p.communicate()
-    if p.returncode != 0:
-        raise OSError(err)
-    return int(result.strip().split()[0])
-
 def lemmar(filename: str = "WORDS_5.txt") -> tuple[str, str] | None:
     try:
         full_filename = os.path.join(DATA_DIR, filename)
-        # line_count = file_len(full_filename)
         line_count = bufcount(full_filename)
         if line_count > 0:
             content: str = ""
