@@ -6,6 +6,7 @@ import re
 import sys
 from pathlib import Path
 from random import randrange
+from typing import Any
 
 from config import GAME_DATA_DIR, WORD_DATA_DIR
 
@@ -53,41 +54,40 @@ def lemmar_guess(filename: str, guess: str) -> str:
     saved_results = lemmar_load(filename)
     if saved_results[LEMMAR_IDX] < 0 or saved_results[LEMMAR_DONE]:
         new_game = lemmar_new(filename)
+        if new_game is None:
+            raise ValueError("Unable to choose new word")
         saved_results = (new_game[2], [], False, False)
-        game_result = "== new game"
+        game_result = "== new game\n"
     check_word = get_word(filename, saved_results[LEMMAR_IDX])
     if len(new_guess) == 0:
         pass
     elif len(check_word) == len(new_guess):
         count_good, count_bad, count_misplaced = 0, 0, 0
-        list_good, list_bad, list_misplaced = [], [], []
+        list_good, list_misplaced = [], []
         track_word = check_word
+        track_guess = new_guess
         # Remove exact match and no match from track_word
         for i in range(len(new_guess)):
             if new_guess[i] == check_word[i]:
                 # Green result, but no colours yet
+                # Remove matching letter from track_word and track_guess
                 track_word = amend_string(track_word, i)
+                track_guess = amend_string(track_guess, i)
                 list_good.append(new_guess[i])
-                list_bad.append(" ")
-            elif new_guess[i] not in check_word:
-                # Grey result, but no colours yet
-                track_word = amend_string(track_word, i)
-                list_good.append(" ")
-                list_bad.append(new_guess[i])
             else:
                 list_good.append(" ")
-                list_bad.append(" ")
-        # Anything left in track_word must be a misplaced letter
-        for i in range(len(new_guess)):
-            if track_word[i] == " ":
-                # We've already fixed this guess letter in place
+        # Find misplaced letters in altered word, using altered guess value
+        for i in range(len(track_guess)):
+            if track_guess[i] == " ":
+                # We've already fixed this guessed letter in place
                 list_misplaced.append(" ")
-            elif new_guess[i] in track_word:
+            elif track_guess[i] in track_word:
                 # Yellow result, but no colours yet
-                list_misplaced.append(new_guess[i])
+                list_misplaced.append(track_guess[i])
                 # Remove the found misplaced letter once from track_word
-                idx = track_word.find(new_guess[i])
-                track_word = amend_string(track_word, idx)
+                idx = track_word.find(track_guess[i])
+                if idx > -1:
+                    track_word = amend_string(track_word, idx)
             else:
                 list_misplaced.append(" ")
         for i in range(len(new_guess)):
@@ -100,15 +100,14 @@ def lemmar_guess(filename: str, guess: str) -> str:
             else:
                 game_result += f".{new_guess[i]}."
                 count_bad += 1
-        print("good: ", "".join(list_good))
-        print("misplaced: ", "".join(list_misplaced))
-        print("bad: ", "".join(list_bad))
+        # print("good: ", "".join(list_good))
+        # print("misplaced: ", "".join(list_misplaced))
         saved_list = saved_results[LEMMAR_STS]
         saved_list.append(game_result)
         done = saved_results[LEMMAR_DONE]
         won = saved_results[LEMMAR_WON]
         # Game over conditions
-        if (len(saved_list) >= len(check_word)
+        if (len(saved_list) > len(check_word)
                 or count_good == len(check_word)):
             if count_good == len(check_word):
                 won = True
@@ -118,17 +117,17 @@ def lemmar_guess(filename: str, guess: str) -> str:
 
         # Game over condition results
         if done and won:
-            game_result += " == You won!"
+            game_result += " \n== You won!"
         elif done and not won:
-            game_result += f" == You failed! The word was {check_word}."
+            game_result += f" \n== You failed! The word was {check_word}."
     else:
         game_result = f"== invalid guess: {new_guess}=="
     if game_result.startswith("== "):
-        game_result += f" == guess the {len(check_word)} letters"
+        game_result += f" \n== guess the {len(check_word)} letters"
 
     return game_result
 
-def lemmar_status() -> list[str]:
+def lemmar_status() -> str:
     game_results: list[str] = []
     files = [5, 6, 7, 8]
     for file in files:
@@ -150,10 +149,13 @@ def lemmar_status() -> list[str]:
             elif len(saved_results[LEMMAR_STS]) == 0:
                 result = f"Haven't made a guess for *{file}* word"
         game_results.append(result)
+    all_game_results = ""
+    for result in game_results:
+        all_game_results += (("\n" if len(all_game_results) > 0 else "") + result)
 
-    return game_results
+    return all_game_results
 
-def dict_hash(dictionary: dict[str, any]) -> str:
+def dict_hash(dictionary: dict[str, Any]) -> str:
     """MD5 hash of a dictionary."""
     dhash = hashlib.md5()
     # We need to sort arguments so {'a': 1, 'b': 2} is
@@ -167,7 +169,7 @@ def lemmar_load(filename: str) -> tuple[int, list[str], bool, bool]:
     status: list[str] = []
     done: bool = False
     won: bool = False
-    data_to_check: dict[str: any] = {}
+    data_to_check: dict[str, Any] = {}
     data_to_check[LEMMAR_DICT_IDX] = chosen_line
     data_to_check[LEMMAR_DICT_STS] = status
     data_to_check[LEMMAR_DICT_DONE] = done
@@ -206,7 +208,7 @@ def lemmar_load(filename: str) -> tuple[int, list[str], bool, bool]:
     return (chosen_line, status, done, won)
 
 def lemmar_save(filename: str, chosen_line: int, status: list[str], done: bool, won: bool) -> None:
-    data_to_save: dict[str: any] = {}
+    data_to_save: dict[str, Any] = {}
     data_to_save[LEMMAR_DICT_IDX] = chosen_line
     data_to_save[LEMMAR_DICT_STS] = status
     data_to_save[LEMMAR_DICT_DONE] = done
@@ -236,6 +238,7 @@ def lemmar_new(filename: str) -> tuple[str, str, int] | None:
         if line_count > 0:
             content: str = ""
             count_blanks: int = 0
+            chosen_line = -1
             while content == "" and count_blanks < 3:
                 # Choose a new word
                 chosen_line = randrange(1, line_count)

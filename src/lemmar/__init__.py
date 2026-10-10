@@ -42,6 +42,7 @@ def main(w5: bool | None, w6: bool | None, w7: bool | None, w8: bool | None, s: 
             if {w5, w6, w7, w8} == {False} and s:
                 click.echo(lemmar_status())
                 valid_game = False
+                s = False
         case 5:
             w5, w6, w7, w8 = True, False, False, False
         case 6:
