@@ -8,7 +8,7 @@ from pathlib import Path
 from random import randrange
 from typing import Any
 
-from config import GAME_DATA_DIR, WORD_DATA_DIR
+from lemmar.config import GAME_DATA_DIR, WORD_DATA_DIR
 
 CHUNK_SIZE = 4096
 # Keys for the dictionary
