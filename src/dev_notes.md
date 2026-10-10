@@ -14,3 +14,4 @@
 Use UV to install the app on the local (development) PC:
 
 - uv tool install . -e
+- uv tool install . -e --force
